@@ -5,8 +5,12 @@ import {
 	parseMouseEvent,
 	parseMouseInputChunk,
 	resizeJiggleSize,
+	resolveWheelLines,
 	scrollViewportTop,
 	selectionDragScrollLines,
+	WHEEL_LINES_DEFAULT,
+	WHEEL_LINES_MAX,
+	WHEEL_LINES_MIN,
 } from "../src/core/pty-scroll.mjs";
 
 test("mouseWheelDirection decodes standard/passive SGR and X10 wheel events", () => {
@@ -103,4 +107,29 @@ test("resizeJiggleSize chooses a safe temporary size to force child redraw", () 
 	assert.deepEqual(resizeJiggleSize(20, 34), { cols: 20, rows: 33 });
 	assert.deepEqual(resizeJiggleSize(120, 6), { cols: 119, rows: 6 });
 	assert.equal(resizeJiggleSize(20, 6), null);
+});
+
+test("resolveWheelLines falls back to the default when unset/empty/invalid", () => {
+	assert.equal(resolveWheelLines(undefined), WHEEL_LINES_DEFAULT);
+	assert.equal(resolveWheelLines(null), WHEEL_LINES_DEFAULT);
+	assert.equal(resolveWheelLines(""), WHEEL_LINES_DEFAULT);
+	assert.equal(resolveWheelLines("   "), WHEEL_LINES_DEFAULT);
+	assert.equal(resolveWheelLines("abc"), WHEEL_LINES_DEFAULT);
+	assert.equal(resolveWheelLines("NaN"), WHEEL_LINES_DEFAULT);
+});
+
+test("resolveWheelLines floors and clamps overrides to a sane range", () => {
+	assert.equal(resolveWheelLines("1"), 1);
+	assert.equal(resolveWheelLines("3"), 3);
+	assert.equal(resolveWheelLines(3), 3);
+	assert.equal(resolveWheelLines("2.9"), 2); // floored
+	assert.equal(resolveWheelLines("0"), WHEEL_LINES_MIN); // clamped up
+	assert.equal(resolveWheelLines("-5"), WHEEL_LINES_MIN); // clamped up
+	assert.equal(resolveWheelLines("999"), WHEEL_LINES_MAX); // clamped down
+});
+
+test("resolveWheelLines honors caller-supplied fallback and bounds", () => {
+	assert.equal(resolveWheelLines(undefined, 4), 4);
+	assert.equal(resolveWheelLines("50", 4, 1, 20), 20);
+	assert.equal(resolveWheelLines("0", 4, 2, 20), 2);
 });

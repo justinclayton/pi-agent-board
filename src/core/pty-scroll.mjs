@@ -98,6 +98,27 @@ export function scrollViewportTop(viewportTop, bottom, linesUp) {
 	};
 }
 
+// Per-event mouse-wheel scroll step for the local attach viewport. macOS momentum/inertial
+// scrolling delivers a burst of wheel events per physical flick, so each event should move
+// only a few lines or the viewport overshoots whole screens at a time.
+export const WHEEL_LINES_DEFAULT = 2;
+export const WHEEL_LINES_MIN = 1;
+export const WHEEL_LINES_MAX = 10;
+
+/**
+ * Resolve how many lines a single mouse-wheel event scrolls the local attach viewport.
+ *
+ * `raw` is the user override (e.g. AGENT_BOARD_WHEEL_LINES). When it is unset, empty, or
+ * not a finite number we fall back to `fallback`; otherwise the value is floored and clamped
+ * to `[min, max]` so a stray huge/zero/negative value can't make scrolling unusable.
+ */
+export function resolveWheelLines(raw, fallback = WHEEL_LINES_DEFAULT, min = WHEEL_LINES_MIN, max = WHEEL_LINES_MAX) {
+	if (raw === undefined || raw === null || String(raw).trim() === "") return fallback;
+	const n = Number(raw);
+	if (!Number.isFinite(n)) return fallback;
+	return clampInt(n, min, max);
+}
+
 /**
  * Decide whether drag-selecting at/just beyond the viewport edge should auto-scroll.
  * Positive values scroll up into older output; negative values scroll down.
